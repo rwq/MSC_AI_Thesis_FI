@@ -1,6 +1,7 @@
 import torch
+import numpy as np
 
-def psnr(y_hat, y):
+def psnr(y_hat, y, R=255.0):
     '''
     Both inputs should be of shape:
     batch_size x n_channels x height x width
@@ -12,10 +13,10 @@ def psnr(y_hat, y):
     assert y_hat.size() == y.size(), 'Input dimensions must match.'
 
     
-    R = max(y.max(), y_hat.max()).float()
+    # R = max(y.max(), y_hat.max()).float()
     batch_mse = (y_hat-y).pow(2).float().mean(dim=(1,2,3))
     
-    batch_psnr = 20 * torch.log10(R) - 10 * torch.log10(batch_mse)
+    batch_psnr = 20 * np.log10(R) - 10 * torch.log10(batch_mse)
     
     return batch_psnr
 
