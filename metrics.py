@@ -18,7 +18,7 @@ def psnr(y_hat, y, R=255.0):
     
     batch_psnr = 20 * np.log10(R) - 10 * torch.log10(batch_mse)
     
-    return batch_psnr
+    return batch_psnr.tolist()
 
 
 def interpolation_error(y_hat, y):
@@ -34,7 +34,7 @@ def interpolation_error(y_hat, y):
 
     mse = (y_hat-y).pow(2).mean(dim=(1,2,3))
     
-    return mse.sqrt()
+    return mse.sqrt().tolist()
 
 
 def ssim(im1, im2, c1=1., c2=1., c3=1.):
@@ -73,4 +73,4 @@ def ssim(im1, im2, c1=1., c2=1., c3=1.):
     C = (2 * sig1 * sig2 + c2) / (sig1**2 + sig2**2 + c2)
     S = (cov + c3) / (sig1 * sig2 + c3)
     
-    return L * C * S
+    return (L * C * S).tolist()

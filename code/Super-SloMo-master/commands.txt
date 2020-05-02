@@ -1,0 +1,1 @@
+python video_to_slomo.py --ffmpeg_dir=c:\ffmpeg\bin\ --video=E:\scriptieAI\demo_data\VID_20191227_193100.mp4 --sf=4 --checkpoint=E:\scriptieAI\models\superslomo\SuperSloMo.ckpt

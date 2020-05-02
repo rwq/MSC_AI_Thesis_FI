@@ -1,0 +1,17 @@
+cd data
+wget http://data.csail.mit.edu/tofu/testset/vimeo_interp_test.zip
+unzip vimeo_interp_test.zip
+rm vimeo_interp_test.zip
+wget http://data.csail.mit.edu/tofu/testset/vimeo_denoising_test.zip
+unzip vimeo_denoising_test.zip
+rm vimeo_denoising_test.zip
+wget http://data.csail.mit.edu/tofu/testset/vimeo_deblocking_test.zip
+unzip vimeo_deblocking_test.zip
+rm vimeo_deblocking_test.zip
+wget http://data.csail.mit.edu/tofu/testset/vimeo_super_resolution_test.zip
+unzip vimeo_super_resolution_test.zip
+rm vimeo_super_resolution_test.zip
+wget http://data.csail.mit.edu/tofu/testset/vimeo_test_clean.zip
+unzip vimeo_test_clean.zip
+rm vimeo_test_clean.zip
+cd ..

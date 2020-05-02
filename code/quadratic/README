@@ -1,0 +1,38 @@
+This is the implementation of paper:
+@inproceedings{qvi_nips19,
+	title={Quadratic video interpolation},
+	author={Xiangyu Xu and Li Siyao and Wenxiu Sun and Qian Yin and Ming-Hsuan Yang},
+	booktitle = {NeurIPS},
+	year={2019}
+}
+
+Please cite our paper if you find the code useful in your research.
+
+This code is implemented under Pytorch 1.0.1 for CUDA 9.0 with python 3.7. The following pakages are required
+to run the code:
+	* torchvision
+	* cupy
+	* tensorboardX
+	* cv2 (opencv package)
+
+How to use:
+download youtube_11 (for training) into datasets folder;
+download adobe240_validation (for validation) into datasets folder;
+download 
+
+Note: the all data folder must be into similar structure:
+	datasets/folder - subfolderA - 0000.png, 0001.png, ...
+			- subfolderB - 0000.png, 0001.png, ...
+			
+		
+
+In our implementations, all settings are put into config files. Just modify the config file for change training 
+or test settings (e.g., model, learning rate, checkpoint ...).
+
+Examples of use:
+
+	*interpolate (test):
+		python interpolate.py configs/config_test.py
+
+
+Please note that this code is only permitted to use for non-commercial purpose.
