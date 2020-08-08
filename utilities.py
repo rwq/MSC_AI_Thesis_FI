@@ -3,6 +3,7 @@ import numpy as np
 from PIL import Image
 from code.sepconvfull import model
 import torch
+from torch import nn
 from collections import defaultdict, OrderedDict
 import math
 
@@ -51,15 +52,16 @@ class EarlyStopping:
 
     '''
     
-    def __init__(self, results, patience, objective='min', metric='L1_loss'):
+    def __init__(self, results, patience, objective='min', metric='L1_loss', fold='valid'):
         self.results = results
         self.patience = patience
         self.objective = objective
         self.metric = metric
+        self.fold = fold
         
     def stop(self):
         self.new_best()
-    
+
         if self.time_since_best > self.patience:
             return True
         else:
@@ -68,7 +70,7 @@ class EarlyStopping:
 
     
     def new_best(self):
-        values = self.results.results['valid'][self.metric]
+        values = self.results.results[self.fold][self.metric]
         epochs = list(values.keys())
         means = np.array([np.mean(values[epoch]) for epoch in epochs])
         
@@ -129,7 +131,7 @@ def convert_weights(weights):
 
 
 
-def convert_subnet(subnet, kernel_size):
+def convert_subnet(subnet, kernel_size, random_output_kernel):
     
     pad = int((kernel_size - 51)/2)
     
@@ -137,55 +139,80 @@ def convert_subnet(subnet, kernel_size):
     W = subnet[4].weight.data
     b = subnet[4].bias.data
 
-    subnet[4] = nn.Conv2d(64, kernel_size, 3, stride=1, padding=1)
+    subnet[4] = torch.nn.Conv2d(64, kernel_size, 3, stride=1, padding=1)
 
-    subnet[4].weight.data.zero_()
-    subnet[4].bias.data.zero_()
-    subnet[4].weight.data[pad:-pad] = W
-    subnet[4].bias.data[pad:-pad] = b
+    # subnet[4].weight.data.zero_()
+    # subnet[4].bias.data.zero_()
+    # subnet[4].weight.data.div_(10)
+    # subnet[4].bias.data.div_(10)
+    if not random_output_kernel and pad > 0:
+        subnet[4].weight.data[pad:-pad] = W
+        subnet[4].bias.data[pad:-pad] = b
+    elif not random_output_kernel and pad == 0:
+        subnet[4].weight.data = W
+        subnet[4].bias.data = b
     
     
     # change last layer
     b = subnet[7].bias.data
     W = subnet[7].weight.data
 
-    subnet[7] = nn.Conv2d(kernel_size, kernel_size, 3, stride=1, padding=1)
+    subnet[7] = torch.nn.Conv2d(kernel_size, kernel_size, 3, stride=1, padding=1)
     
-    subnet[7].weight.data.zero_()
-    subnet[7].bias.data.zero_()
-    
-    subnet[7].weight.data[pad:-pad, pad:-pad] = W
-    subnet[7].bias.data[pad:-pad] = b
+    # subnet[7].weight.data.zero_()
+    # subnet[7].bias.data.zero_()
+    # subnet[7].weight.data.div_(10)
+    # subnet[7].bias.data.div_(10)
+    if not random_output_kernel and pad > 0:
+        subnet[7].weight.data[pad:-pad, pad:-pad] = W
+        subnet[7].bias.data[pad:-pad] = b
+    elif not random_output_kernel and pad == 0:
+        subnet[7].weight.data = W
+        subnet[7].bias.data = b
+
     
     return subnet
 
+def get_sepconv_sophisticated(input_size=2, kernel_size_d=101, true_kernel_size=50):
+    '''
+    currently implemented for:
+    F2, varying kernel      No
+    F4, standard kernel     No
+    F4, varying kernel      No
+    '''
+
+    assert input_size == 2
+
+    sepconv = model.SepConvNetExtended(kernel_size=51)
 
 
-def get_sepconv(input_size=2, kernel_size=51, weights='l1'):
-
-    assert weights in ['l1', 'lf']
     
-    kernel_size = 61
+    pass
+
+def get_sepconv(input_size=2, kernel_size=51, weights=None, random_output_kernel=False):
+    # NAIVE
+    assert weights in ['l1', 'lf', None]
     assert kernel_size % 2 == 1 and kernel_size >= 51
     kernel_pad = int(math.floor(kernel_size / 2.0))
     
 
     sepconv = model.SepConvNet(kernel_size=51)
+    if weights in ['l1', 'lf']:
+        weights = torch.load(f'code/sepconv/network-{weights}.pytorch')
+        weights = convert_weights(weights)
 
-    weights = torch.load(f'code/sepconv/network-{weights}.pytorch')
-    weights = convert_weights(weights)
-
-    sepconv.load_state_dict(weights)
+        sepconv.load_state_dict(weights)
     
     
-    if kernel_size > 51:
-        sepconv.get_kernel.moduleVertical1 = convert_subnet(sepconv.get_kernel.moduleVertical1, kernel_size)
-        sepconv.get_kernel.moduleVertical2 = convert_subnet(sepconv.get_kernel.moduleVertical2, kernel_size)
-        sepconv.get_kernel.moduleHorizontal1 = convert_subnet(sepconv.get_kernel.moduleHorizontal1, kernel_size)
-        sepconv.get_kernel.moduleHorizontal2 = convert_subnet(sepconv.get_kernel.moduleHorizontal2, kernel_size)
+    sepconv.get_kernel.moduleVertical1 = convert_subnet(sepconv.get_kernel.moduleVertical1, kernel_size, random_output_kernel)
+    sepconv.get_kernel.moduleVertical2 = convert_subnet(sepconv.get_kernel.moduleVertical2, kernel_size, random_output_kernel)
+    sepconv.get_kernel.moduleHorizontal1 = convert_subnet(sepconv.get_kernel.moduleHorizontal1, kernel_size, random_output_kernel)
+    sepconv.get_kernel.moduleHorizontal2 = convert_subnet(sepconv.get_kernel.moduleHorizontal2, kernel_size, random_output_kernel)
 
-        sepconv.modulePad = torch.nn.ReplicationPad2d([kernel_pad, kernel_pad, kernel_pad, kernel_pad])
-        
+    sepconv.modulePad = torch.nn.ReplicationPad2d([kernel_pad, kernel_pad, kernel_pad, kernel_pad])
+
+
+
 
     if input_size == 4:
 
@@ -197,10 +224,12 @@ def get_sepconv(input_size=2, kernel_size=51, weights='l1'):
         sepconv.get_kernel.moduleConv1[0] = torch.nn.Conv2d(12, 32, kernel_size=3, stride=1, padding=1)
 
         # replace old weights for first 6 channels, randomly init others
-        sepconv.get_kernel.moduleConv1[0].weight.data.zero_()
+        # sepconv.get_kernel.moduleConv1[0].weight.data.zero_()
+        sepconv.get_kernel.moduleConv1[0].weight.data.div_(10)
         sepconv.get_kernel.moduleConv1[0].weight.data[:, 3:9, :, :] = W
         
-        sepconv.get_kernel.moduleConv1[0].bias.data.zero_()
+        # sepconv.get_kernel.moduleConv1[0].bias.data.zero_()
+        sepconv.get_kernel.moduleConv1[0].bias.data.div_(10)
         sepconv.get_kernel.moduleConv1[0].bias.data = b
     
         return sepconv
@@ -224,3 +253,45 @@ def create_grid(y_hat, y, **args):
     grid = torchvision.utils.make_grid(inp_tensor, **args)
     
     return grid
+
+
+class EdgeMap(nn.Module):
+    
+    def __init__(self, weights=[1,1,1], tau=1, quadratic=False):
+        super(EdgeMap, self).__init__()
+        self.tau = tau
+        
+        S_x = torch.Tensor([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
+        S_y = S_x.t()
+
+        self.convx = torch.nn.Conv2d(3, 1, kernel_size=3, stride=1, padding=1, bias=False)
+        self.convy = torch.nn.Conv2d(3, 1, kernel_size=3, stride=1, padding=1, bias=False)
+
+        self.convx.weight.data = S_x.repeat(repeats=(3,1,1)).unsqueeze(0)
+        self.convy.weight.data = S_y.repeat(repeats=(3,1,1)).unsqueeze(0)
+        
+        self.f1 = 1 if quadratic else 0
+        self.f2 = 2 if quadratic else 1
+    
+    def forward_bulk(self, X):
+
+        y = X[-1].unsqueeze(0)
+        X = X[:-1]
+        G_x = self.convx(y)
+        G_y = self.convy(y)
+        G_t = X[self.f2] - X[self.f1]
+        
+        m = (G_x**2 + G_y**2 + G_t**2).sqrt().mean(dim=1)
+        
+        return m
+
+    def forward(self, X, y):
+        G_x = self.convx(y)
+        G_y = self.convy(y)
+        # G_t = X[:,self.f2] - X[:,self.f1]
+        G_t = y - X[:, self.f1]
+        
+        m = (G_x**2 + G_y**2 + self.tau * G_t**2).sqrt().mean(dim=1)
+        
+        return m
+        

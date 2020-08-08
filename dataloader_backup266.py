@@ -6,13 +6,12 @@ import re
 from PIL import Image
 import random
 import numpy as np
-from constants import *
+from constants import FP_UCF101, FP_ADOBE240, FP_VIMEO90K, FP_MIDDLEBURY, FP_LMD, FP_INPUT_VIDEOS
 import cv2
 import pandas as pd
 import albumentations as A
 import time
-import utilities
-import math
+
 
 HARD_TEST_INSTANCES = {
     'redbull480.mp4': [116, 763, 1089, 1253]
@@ -85,81 +84,40 @@ def get_basenames(files):
     return sorted(list(set(zip(basenames, exts))))
 
 
-# def get_ucf101_files():
-#     return os.listdir(FP_UCF101)
+def get_ucf101_files():
+    return os.listdir(FP_UCF101)
 
-# def get_adobe240_files():
-#     return os.listdir(FP_ADOBE240)
+def get_adobe240_files():
+    return os.listdir(FP_ADOBE240)
 
 
 
 
 # UCF101
-# def ucf101_generator(files=get_ucf101_files(), k=1, quadratic=False):
-#     basenames = get_basenames(files)
+def ucf101_generator(files=get_ucf101_files(), k=1, quadratic=False):
+    basenames = get_basenames(files)
     
-#     if quadratic:
-#         image_ids = [0,1,3,4]
-#         gt = 2
-#     else:
-#         image_ids = [0,2]
-#         gt = 1
+    if quadratic:
+        image_ids = [0,1,3,4]
+        gt = 2
+    else:
+        image_ids = [0,2]
+        gt = 1
     
-#     for filebase, ext in basenames:
-#         frames = []
-        
-#         for i in image_ids:
-#             filepath = os.path.join(FP_UCF101, f'{filebase}_{i}.{ext}')
-#             img = torch.Tensor(imageio.imread(filepath))
-#             frames.append(img)
-            
-#         # load gt
-#         filepath = os.path.join(FP_UCF101, f'{filebase}_{gt}.{ext}')
-#         img = torch.Tensor(imageio.imread(filepath))
-        
-#         yield frames, img
-
-
-class gopro_dataset(Dataset):
-
-    def __init__(self, quadratic=False, fold='train'):#, transformer=None):
-        
-        assert fold in ['train', 'validation', 'test']
-        
-        self.name = 'GoPro'
-        self.fold = fold
-        self.gt_id = 12
-        self.quadratic = quadratic
-        if quadratic:
-            self.image_ids = [0,8,16,24]
-        else:
-            self.image_ids = [8,16]
-            
-        self.folder_paths = self.get_folder_paths()
-            
-        
-    def get_folder_paths(self):
-        fold_path = os.path.join(FP_GOPRO, self.fold)
-        return [os.path.join(FP_GOPRO, self.fold, f) for f in os.listdir(fold_path)]
-
-    def __len__(self):
-        return len(self.folder_paths)
-
-    def __getitem__(self, idx):
+    for filebase, ext in basenames:
         frames = []
-        folder = self.folder_paths[idx]
         
-        for i in self.image_ids:
-            filepath = os.path.join(folder, f'{i}.jpeg')
+        for i in image_ids:
+            filepath = os.path.join(FP_UCF101, f'{filebase}_{i}.{ext}')
             img = torch.Tensor(imageio.imread(filepath))
             frames.append(img)
-
-        frames = torch.stack(frames)
-
-        filepath = os.path.join(folder, f'{self.gt_id}.jpeg')
-        y = torch.Tensor(imageio.imread(filepath))
+            
+        # load gt
+        filepath = os.path.join(FP_UCF101, f'{filebase}_{gt}.{ext}')
+        img = torch.Tensor(imageio.imread(filepath))
         
-        return frames,y
+        yield frames, img
+
 
 
 class ucf101_dataset(Dataset):
@@ -194,9 +152,8 @@ class ucf101_dataset(Dataset):
         return frames, img
 
 
-    def __init__(self, quadratic=False):#, transformer=None):
+    def __init__(self, files=get_ucf101_files(), quadratic=False):#, transformer=None):
         # split into filename and extension
-        self.files=get_ucf101_files(), 
         self.basenames = list(get_basenames(files))
         self.transformer = transformer
         self.name = 'UCF101'
@@ -220,65 +177,18 @@ def split_data(dataset, percentages):
     return torch.utils.data.random_split(dataset, fold_sizes)
 
 
-class large_motion_dataset2(Dataset):
-
-    def __init__(self, fold='train', quadratic=False, cropped=True, min_flow=0):#, transformer=None):
-        
-        self.name = 'LMD2'
-        self.quadratic = quadratic
-        if cropped:
-            self.fold_path = os.path.join(FP_LMD2, f'{fold}_cropped')
-        else:
-            self.fold_path = os.path.join(FP_LMD2, fold)
-        self.sequences = [os.path.join(self.fold_path, seq) for seq in os.listdir(self.fold_path)]
-        
-        if quadratic:
-            self.image_ids = [0,2,4,6]
-        else:
-            self.image_ids = [2,4]
-
-        if min_flow>0:
-            flow_data = pd.read_csv('hardinstancesinfo/large_motion_dataset2_train_flow2.csv')
-            subset = flow_data[flow_data.mean_manh_flow >= min_flow]
-            self.sequences = [s for i,s in enumerate(self.sequences) if i in subset.index.tolist()]
-            self.weights = subset.mean_manh_flow.tolist()
-            
-
-    def __len__(self):
-        return len(self.sequences)
-
-    def __getitem__(self, idx):
-        frames = []
-        folderpath = self.sequences[idx]
-
-        for i in self.image_ids:
-            filepath = os.path.join(folderpath, f'{i}.jpg')
-            img = torch.Tensor(imageio.imread(filepath))
-            frames.append(img)
-
-        frames = torch.stack(frames)
-
-        filepath = os.path.join(folderpath, '3.jpg')
-        y = torch.Tensor(imageio.imread(filepath))
-
-
-        return frames, y
-
-
-
 
 class large_motion_dataset(Dataset):
 
-    def __init__(self,  quadratic=False):
-        self.name = 'LMD2'
+    def __init__(self, files=os.listdir(FP_LMD), quadratic=False):#, transformer=None):
+        self.basenames = list(get_basenames(files))
+        self.name = 'LMD'
         self.gt_id = 2
         self.quadratic = quadratic
         if quadratic:
             self.image_ids = [0,1,3,4]
         else:
             self.image_ids = [1,3]
-
-        self.basenames = get_basenames(os.listdir(FP_LMD))
             
 
     def __len__(self):
@@ -338,113 +248,70 @@ def middlebury_generator(quadratic=False):
 # Vimeo90K
 
 # Adobe240
-# def adobe240_generator(files=get_adobe240_files(), quadratic=False):
-#     basenames = get_basenames(files)
+def adobe240_generator(files=get_adobe240_files(), quadratic=False):
+    basenames = get_basenames(files)
 
 
-#     if quadratic:
-#         image_ids = [0,1,3,4]
-#         gt = 2
-#     else:
-#         image_ids = [0,2]
-#         gt = 1
+    if quadratic:
+        image_ids = [0,1,3,4]
+        gt = 2
+    else:
+        image_ids = [0,2]
+        gt = 1
 
-#     for filebase, ext in basenames:
-#         frames = []
+    for filebase, ext in basenames:
+        frames = []
         
-#         for i in image_ids:
-#             filepath = os.path.join(FP_ADOBE240, f'{filebase}_{i}.{ext}')
-#             img = torch.Tensor(imageio.imread(filepath))
-#             frames.append(img)
+        for i in image_ids:
+            filepath = os.path.join(FP_ADOBE240, f'{filebase}_{i}.{ext}')
+            img = torch.Tensor(imageio.imread(filepath))
+            frames.append(img)
             
-#         # load gt
-#         filepath = os.path.join(FP_ADOBE240, f'{filebase}_{gt}.{ext}')
-#         y = torch.Tensor(imageio.imread(filepath))
+        # load gt
+        filepath = os.path.join(FP_ADOBE240, f'{filebase}_{gt}.{ext}')
+        y = torch.Tensor(imageio.imread(filepath))
         
-#         yield frames, y
+        yield frames, y
+
 
 class adobe240_dataset(Dataset):
 
-    def __init__(self, quadratic=False, fold='train'):#, transformer=None):
-        
-        assert fold in ['train', 'validation', 'test']
-        
+    def __init__(self, files=get_adobe240_files(), quadratic=False):#, transformer=None):
+        self.basenames = list(get_basenames(files))
         self.name = 'Adobe240'
-        self.fold = fold
-        self.gt_id = 12
+        # self.transformer = transformer
+        self.gt_id = 2
         self.quadratic = quadratic
         if quadratic:
-            self.image_ids = [0,8,16,24]
+            self.image_ids = [0,1,3,4]
         else:
-            self.image_ids = [8,16]
+            self.image_ids = [1,3]
             
-        self.folder_paths = self.get_folder_paths()
-            
-        
-    def get_folder_paths(self):
-        fold_path = os.path.join(FP_ADOBE240, self.fold)
-        return [os.path.join(FP_ADOBE240, self.fold, f) for f in os.listdir(fold_path)]
 
     def __len__(self):
-        return len(self.folder_paths)
+        return len(self.basenames)
 
     def __getitem__(self, idx):
         frames = []
-        folder = self.folder_paths[idx]
+        filebase, ext = self.basenames[idx]
         
         for i in self.image_ids:
-            filepath = os.path.join(folder, f'{i}.jpeg')
-            img = torch.Tensor(imageio.imread(filepath))
-            frames.append(img)
-
+            try:
+                filepath = os.path.join(FP_ADOBE240, f'{filebase}_{i}.{ext}')
+                img = torch.Tensor(imageio.imread(filepath))
+                frames.append(img)
+            except:
+                print('error adobe240', filebase, i)
+                exit()
         frames = torch.stack(frames)
 
-        filepath = os.path.join(folder, f'{self.gt_id}.jpeg')
+        filepath = os.path.join(FP_ADOBE240, f'{filebase}_{self.gt_id}.{ext}')
         y = torch.Tensor(imageio.imread(filepath))
-        
-        return frames,y
-
-
-# class adobe240_dataset(Dataset):
-
-#     def __init__(self, files=get_adobe240_files(), quadratic=False):#, transformer=None):
-#         self.basenames = list(get_basenames(files))
-#         self.name = 'Adobe240'
-#         # self.transformer = transformer
-#         self.gt_id = 2
-#         self.quadratic = quadratic
-#         if quadratic:
-#             self.image_ids = [0,1,3,4]
-#         else:
-#             self.image_ids = [1,3]
-
-
-
-
-#     def __len__(self):
-#         return len(self.basenames)
-
-#     def __getitem__(self, idx):
-#         frames = []
-#         filebase, ext = self.basenames[idx]
-        
-#         for i in self.image_ids:
-#             try:
-#                 filepath = os.path.join(FP_ADOBE240, f'{filebase}_{i}.{ext}')
-#                 img = torch.Tensor(imageio.imread(filepath))
-#                 frames.append(img)
-#             except:
-#                 print('error adobe240', filebase, i)
-#                 exit()
-#         frames = torch.stack(frames)
-
-#         filepath = os.path.join(FP_ADOBE240, f'{filebase}_{self.gt_id}.{ext}')
-#         y = torch.Tensor(imageio.imread(filepath))
 
         # if self.transformer != None:
         #     frames, y = self.transformer.apply(frames, y)
 
-        # return frames, y
+        return frames, y
 
 # def get_folderpaths_vimeo90k():
 #     folders = os.listdir(FP_VIMEO90K)
@@ -469,19 +336,12 @@ class adobe240_dataset(Dataset):
 
 class vimeo90k_dataset(Dataset):
 
-    def __init__(self, quadratic=False, fold='all', hard=False):#, transformer=None):
-        if hard:
-            fold='train'
-
+    def __init__(self, quadratic=False, fold='all'):#, transformer=None):
         assert fold in ['train', 'test', 'all', 'valid', 'nontest']
         
         sequences = self.get_vimeo_sequences(fold)
-        if hard:
-            self.folderpaths = [os.path.join(FP_VIMEO90K_HARD, 'sequences', s) for s in sorted(sequences)]
-        else:
-            self.folderpaths = [os.path.join(FP_VIMEO90K, 'sequences', s) for s in sorted(sequences)]
-
         
+        self.folderpaths = [os.path.join(FP_VIMEO90K, 'sequences', s) for s in sequences]
         self.name = 'Vimeo90K'
         self.quadratic = quadratic
 
@@ -500,17 +360,18 @@ class vimeo90k_dataset(Dataset):
         folderpath = self.folderpaths[idx]
         frames = []
 
-        for i in self.image_ids:
-            img = imageio.imread(os.path.join(folderpath, f'im{i}.png'))
-            img = torch.Tensor(img)
-            frames.append(img)
+        try:
+            for i in self.image_ids:
+                img = imageio.imread(os.path.join(folderpath, f'im{i}.png'))
+                img = torch.Tensor(img)
+                frames.append(img)
 
-        frames = torch.stack(frames)
+            frames = torch.stack(frames)
 
-        y = imageio.imread(os.path.join(folderpath, f'im{self.gt_id}.png'))
-        y = torch.Tensor(y)
-        # except:
-        #     print('error vimeo', idx, self.folderpaths[idx])
+            y = imageio.imread(os.path.join(folderpath, f'im{self.gt_id}.png'))
+            y = torch.Tensor(y)
+        except:
+            print('error vimeo', idx, self.folderpaths[idx])
 
 
         return frames, y
@@ -582,13 +443,12 @@ class TransformedDataset(Dataset):
                  flip_probs = (0.1, 0.1, 0.2),
                  jitter_prob = 0,
                  random_crop=True,
+                 random_rescale=False,
                  random_rescale_prob=0,
-                 rescale_distr=(.8, 1.2),
+                 rescale_range=(.8, 2.5),
                  crop_size=(128,128),
-                #  channels_first=True,
-                 normalize=True,
-                 hard_alternative_ds=None,
-                 hard_prob=0):
+                 channels_first=True,
+                 normalize=True):
 
         if isinstance(flip_probs, float) or isinstance(flip_probs, int):
             flip_probs = tuple(np.ones(3) * flip_probs)
@@ -600,13 +460,10 @@ class TransformedDataset(Dataset):
         self.random_crop = random_crop
         self.crop_size = crop_size
         self.dataset = dataset
-        # self.channels_first = channels_first
+        self.channels_first = channels_first
         self.normalize = normalize
-        self.rescale_distr = rescale_distr
-        self.random_rescale_prob = random_rescale_prob
-        self.hard_alternative_ds = hard_alternative_ds
-        self.hard_prob = hard_prob
-
+        self.random_rescale = random_rescale
+        self.rescale_range = rescale_range
 
         if hasattr(self.dataset, 'quadratic'):
             self.quadratic = dataset.quadratic
@@ -626,24 +483,51 @@ class TransformedDataset(Dataset):
         ], p=1, additional_targets=additional_targets)
 
 
+
     def __getitem__(self, idx):
-        use_default = self.hard_alternative_ds == None or random.random() > self.hard_prob
-
-        if use_default:
+        try:
             frames, y = self.dataset[idx]
-            return self.apply(frames, y)
-        else:
-            frames, y = self.hard_alternative_ds[idx]
+        except:
+            print(idx)
+            time.sleep(100000)
 
-            return self.apply(frames, y)
+        return self.apply(frames, y)
 
     def __len__(self):
         return self.dataset.__len__()
 
 
-    def transformation_on_input(self, C):
-        C = C.permute(0,2,3,1)
-        X, y = C[:-1], C[-1]
+    def apply_tensor(self, X):
+        assert X.ndimension() in [3,4]
+
+        if X.ndimension() == 3:
+            X = X.unsqueeze(dim=0)
+
+        F, H, W, C = X.shape
+        
+        # horizontal flip
+        h_flip, v_flip = np.random.rand(2) < self.flip_probs[:2]
+        
+        dims_to_flip = []
+        if h_flip: dims_to_flip.append(1)
+        if v_flip: dims_to_flip.append(2)
+        
+        if len(dims_to_flip) > 0:
+            X = X.flip(dims=dims_to_flip)
+        
+        
+        # random crop
+        if self.random_crop:
+            crop_start_h, crop_start_w = [
+                np.random.randint(H-self.crop_size[0]),
+                np.random.randint(W-self.crop_size[1])
+            ]
+            crop_end_h, crop_end_w = crop_start_h+self.crop_size[0], crop_start_w+self.crop_size[1]
+            X = X[:, crop_start_h:crop_end_h, crop_start_w:crop_end_w, :]
+
+        return X
+
+    def transformation_on_input(self, X,y):
         X = X.numpy().astype('uint8')
         y = y.numpy().astype('uint8')
         if self.quadratic:
@@ -666,13 +550,9 @@ class TransformedDataset(Dataset):
             X = torch.stack([torch.from_numpy(transformed[k]) for k in ['image', 'imager']], dim=0).float()
         
         y = torch.from_numpy(transformed['y']).float()
-
-        X = X.permute(0,3,1,2)
-        y = y.permute(2,0,1).unsqueeze(0)
-        C = torch.cat([X, y], dim=0)
             
 
-        return C
+        return X,y
 
 
 
@@ -680,66 +560,38 @@ class TransformedDataset(Dataset):
         '''
         expects input frames as list of tensors HxWxC and label seperately
         '''
-        # combine everything to one tensor
-        X = torch.cat([input_frames, label.unsqueeze(0)], dim=0)
 
-        # reverse channels
-        X = X.permute(0,3,1,2)
-
-        # scale and random (interesting crop)
-        if random.random() < self.random_rescale_prob:
-            scale = np.random.uniform(*self.rescale_distr)
-            X = torch.nn.functional.interpolate(
-                X, 
-                scale_factor=(scale,scale), 
-                recompute_scale_factor=True,
-                mode= 'bilinear',
-                align_corners=False
-            )
+        # scale
+        if self.random_rescale and random.random() < self.random_rescale_prob:
+            X = 
 
 
-
-
-
-        # random crop
-        if self.random_crop:
-            _, _, H, W = X.shape
-            crop_start_h, crop_start_w = (
-                np.random.randint(H-self.crop_size[0]),
-                np.random.randint(W-self.crop_size[1])
-            )
-            crop_end_h, crop_end_w = crop_start_h+self.crop_size[0], crop_start_w+self.crop_size[1]
-            X = X[:, :, crop_start_h:crop_end_h, crop_start_w:crop_end_w]
+        # crop
 
 
         # apply contrast, brightness saturation and hue change
         if np.random.rand(1) < self.jitter_prob:
-            X = self.transformation_on_input(X)
+            input_frames, label = self.transformation_on_input(input_frames,label)
 
 
         
-        # horizontal/vertical flips
-        h_flip, v_flip = np.random.rand(2) < self.flip_probs[:2]
-        
-        dims_to_flip = []
-        if h_flip: dims_to_flip.append(2)
-        if v_flip: dims_to_flip.append(3)
-        
-        if len(dims_to_flip) > 0:
-            X = X.flip(dims=dims_to_flip)
-        
+        X = torch.cat([input_frames, label.unsqueeze(0)], dim=0)
+
+
+
+        X = self.apply_tensor(X)
+
+        if self.channels_first:
+            X = X.permute(0,3,1,2)
         
         if self.normalize:
             X.div_(255.)
         
-        # split back
         input_frames, y = X[:-1], X[-1]
 
-        # temporal flip
         if np.random.rand(1) < self.flip_probs[-1]:
             input_frames = input_frames.flip(dims=[0])
-
-           
+            
         return input_frames, y
 
 
@@ -812,10 +664,10 @@ def get_datagenerator(dataset, quadratic=False):
     else:
         raise NotImplementedError()
 
-# if __name__ == '__main__':
+if __name__ == '__main__':
 
-#     files = get_adobe240_files()
-#     # print(files[0])
-#     gen = adobe240_generator(files)
+    files = get_adobe240_files()
+    # print(files[0])
+    gen = adobe240_generator(files)
 
-#     print(next(gen))
+    print(next(gen))
