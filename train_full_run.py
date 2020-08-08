@@ -192,8 +192,8 @@ def train(params, n_epochs, verbose=True):
     # Flow_loss = losses.FlowLoss(quadratic=quadratic).cuda()
     
 
-    ds_train_lmd = dataloader.large_motion_dataset2(quadratic = quadratic, cropped=True, fold='train', min_flow=6)
-    ds_valid_lmd = dataloader.large_motion_dataset2(quadratic = quadratic, cropped=True, fold='valid')
+    ds_train_lmd = dataloader.large_motion_dataset(quadratic = quadratic, cropped=True, fold='train', min_flow=6)
+    ds_valid_lmd = dataloader.large_motion_dataset(quadratic = quadratic, cropped=True, fold='valid')
     
     ds_vimeo_train = dataloader.vimeo90k_dataset(fold='train', quadratic = quadratic)
     ds_vimeo_test = dataloader.vimeo90k_dataset(fold='test', quadratic = quadratic)
