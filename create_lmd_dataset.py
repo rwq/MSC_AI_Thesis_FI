@@ -38,7 +38,7 @@ def move_to_sequences(in_folder, out_folder, video_id, downsample_fps=1, frames_
     
     i = 0
     frame_indices=[0,2,3,4,6]
-    # if len(os.listdir(out_folder)) == 0:
+
     s=1
 
     n_frames = len(files)
@@ -75,25 +75,23 @@ def discard_frames(folder, video_id, min_avg_value=10, ssim_threshold=0.3, ssim_
             if imgs[i].mean().item() < min_avg_value:
                 print(f'removed {seq_folder}')
                 removed=True
-                # shutil.rmtree(seq_folder)
                 break
         
 
         ssims = [ssim(imgs[i], imgs[i+1], win_size=11).item() for i in range(4)]
         if min(ssims) < ssim_threshold:
             print(seq_folder, 'min lower than .3')
-            # shutil.rmtree(seq_folder)
             removed=True
         
 
         if max(ssims)-min(ssims) > ssim_range:
             print(f'deleting {seq_folder}')
-            # shutil.rmtree(seq_folder)
             removed=True
         
         if removed:
             with open(os.path.join(args.dataset_folder, 'to_remove_lmd.txt'), 'a') as f:
                 f.write(seq_folder+'\n')
+                shutil.rmtree(seq_folder)
         
         
 
@@ -130,7 +128,6 @@ def crop_fold(fold, video_id=None):
         move1 = (y-X[:,1]).pow(2).mean(dim=(0,1))
         move2 = (y-X[:,2]).pow(2).mean(dim=(0,1))
         weight_map = (move1 + move2).detach().cpu()
-        # weight_map = flow_intensity.mean(dim=(0,1)).detach().cpu()
 
 
 
@@ -196,7 +193,7 @@ if __name__ == '__main__':
         fold_path = os.path.join(args.dataset_folder, fold)
         os.makedirs(fold_path, exist_ok=True)
 
-        # video_filenames = []
+
 
         # download videos
         for url, factor, skip in tqdm(list(zip(*get_urls(fold)))):
@@ -242,7 +239,7 @@ if __name__ == '__main__':
             # move subset of frames to fold
             move_to_sequences(temp_frames_path, fold_path, video.video_id, downsample_fps=factor, frames_between_factor=skip)
 
-            # # delete temp folder
+            # delete temp folder
             shutil.rmtree(temp_frames_path)
 
             # discard all frame boundaries and dark images from fold
