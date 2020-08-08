@@ -13,41 +13,20 @@ import math
 from PIL import Image
 from utilities import EdgeMap
 from torch.nn.functional import interpolate
-# from code.pytorch_pwc2.PWCNetnew import PWCNet
-
-# DATASET_FOLDER = 'large_motion_dataset2'
 
 
-# model = PWCNet()
-# model.load_state_dict(torch.load('code/pytorch_pwc2/network-default.pytorch'))
-# model = model.cuda().eval()
+
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--ffmpeg_dir", type=str, default='C:/ffmpeg/bin', help='path to ffmpeg.exe')
-parser.add_argument("--dataset_folder", type=str, default='large_motion_dataset2', help='path to the output dataset folder')
+parser.add_argument("--dataset_folder", type=str, default='large_motion_dataset', help='path to the output dataset folder')
 parser.add_argument("--crop_height", type=int, default=256)
 parser.add_argument("--crop_width", type=int, default=256)
 parser.add_argument("--crop_height_test", type=int, default=720)
 parser.add_argument("--crop_width_test", type=int, default=1280)
-# parser.add_argument("--img_width", type=int, default=640, help="output image width")
-# parser.add_argument("--img_height", type=int, default=360, help="output image height")
-# parser.add_argument("--train_test_split", type=tuple, default=(90, 10), help="train test split for custom dataset")
+parser.add_argument("--train_test_split", type=tuple, default=(90, 10), help="train test split for custom dataset")
 args = parser.parse_args()
-
-
-
-# for train/valid/test folds:
-# download videos
-
-# train/valid: highest quality, test: 720p progressive
-
-# extract to temp folder
-
-# move from temp to fold (full)
-
-
-# for train/valid:
-# create new folds train/valid cropped using interesting region cropping
 
 
 def move_to_sequences(in_folder, out_folder, video_id, downsample_fps=1, frames_between_factor=30, max_frames=40000):
@@ -127,8 +106,6 @@ def crop_fold(fold, video_id=None):
     os.makedirs(output_folder, exist_ok=True)
     t=transforms.ToTensor()
     
-    # edge_map = EdgeMap(tau=2, quadratic=True).cuda()
-    
     if video_id != None:
         folders = [f for f in os.listdir(input_folder) if f.startswith(video_id)]
     else:
@@ -148,29 +125,14 @@ def crop_fold(fold, video_id=None):
         X = torch.stack([im1, im2, im4, im5]).unsqueeze(0).cuda()
         y = y.unsqueeze(0).cuda()
 
-        # downscale X y
         
-        
-        # crop region vinden
-        # flow_intensity = model(y.cuda(), X[:,0].cuda()).abs()
-        # print(X.shape, y.shape)
-        # edge_intensity = edge_map(X,
-        #     interpolate(X.squeeze(0), scale_factor=.25, recompute_scale_factor=True, mode='bilinear', align_corners=False).unsqueeze(0),
-        #     interpolate(y, scale_factor=.25, recompute_scale_factor=True, mode='bilinear', align_corners=False),
-        # ).unsqueeze(0)
-
-        # edge_intensity = interpolate(
-        #     edge_intensity,scale_factor=4, recompute_scale_factor=True, mode='bilinear', align_corners=False
-        # )
-
-         
+        # find crop region      
         move1 = (y-X[:,1]).pow(2).mean(dim=(0,1))
         move2 = (y-X[:,2]).pow(2).mean(dim=(0,1))
         weight_map = (move1 + move2).detach().cpu()
         # weight_map = flow_intensity.mean(dim=(0,1)).detach().cpu()
 
 
-        # upscale weightmap
 
         # croppen
         B, F, C, H, W = X.size()
@@ -182,11 +144,8 @@ def crop_fold(fold, video_id=None):
 
         # crop interesting region
         weights = weight_map[start_h:end_h, start_w:end_w].flatten()**2
-        # try:
         ind = torch.multinomial(weights.clamp(min=1e-20), 1).item()
-        # except:
-        #     print(folder)
-        #     time.sleep(100)
+
         start_i = math.floor(ind/(end_w-start_w))
         start_j = ind % (end_w-start_w)
 
@@ -202,10 +161,6 @@ def crop_fold(fold, video_id=None):
         save_image(X[2], os.path.join(output_folder, folder, '4.jpg'))
         save_image(X[3], os.path.join(output_folder, folder, '6.jpg'))
         
-        # delete???
-
-
-
 
 
 def get_urls(fold):
@@ -266,12 +221,12 @@ if __name__ == '__main__':
             temp_frames_path = os.path.join(TEMP_FRAMES_PATH, video.video_id)
             os.makedirs(temp_frames_path)
             
-            # ret = os.system('{} -i {} -vf scale={}:{} -vsync 0 -qscale:v 1 {}/%06d.jpg'.format(
-            #     os.path.join(args.ffmpeg_dir, "ffmpeg"),
-            #     video_path, 
-            #     1280, 720,
-            #     temp_frames_path
-            # ))
+            ret = os.system('{} -i {} -vf scale={}:{} -vsync 0 -qscale:v 1 {}/%06d.jpg'.format(
+                os.path.join(args.ffmpeg_dir, "ffmpeg"),
+                video_path, 
+                1280, 720,
+                temp_frames_path
+            ))
             
             
             ret = os.system('{} -i {} -vsync 0 -qscale:v 1 {}/%06d.jpg'.format(
@@ -297,22 +252,22 @@ if __name__ == '__main__':
     
 
             # create cropped version of train and validation set
-            # train_path = os.path.join(args.dataset_folder, 'train') #
-            # valid_path = os.path.join(args.dataset_folder, 'valid') #
+            train_path = os.path.join(args.dataset_folder, 'train') #
+            valid_path = os.path.join(args.dataset_folder, 'valid') #
             
             # create cropped dataset and remove original
-            # print('crop_fold', fold)
+            print('crop_fold', fold)
             if fold in ['train', 'valid']:
-                crop_fold(fold, video.video_id) #
-            # shutil.rmtree(train_path) #
+                crop_fold(fold, video.video_id)
+            shutil.rmtree(train_path)
             
-    # shutil.rmtree(valid_path) #
+    shutil.rmtree(valid_path)
 
-    # remove folder for temporary frames
-    # shutil.rmtree(TEMP_FRAMES_PATH) #
+    remove folder for temporary frames
+    shutil.rmtree(TEMP_FRAMES_PATH)
 
-    # crop_fold('train')
-    # crop_fold('valid')
+    crop_fold('train')
+    crop_fold('valid')
 
         
 
