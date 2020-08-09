@@ -57,25 +57,7 @@ class SubnetExtended(torch.nn.Module):
         self.kernel_d = SubnetB(kernel_size=self.d_size, scale = self.d_scale, dropout=dropout_probs[1])
         
         
-        # if self.kernel_size != None:        
-        #     self.kernel = torch.nn.Sequential(
-        #         torch.nn.Conv2d(in_channels=64, out_channels=self.kernel_size, kernel_size=3, stride=1, padding=1),
-        #         torch.nn.ReLU(inplace=False),
-        #         torch.nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
-        #         torch.nn.Conv2d(in_channels=self.kernel_size, out_channels=self.kernel_size, kernel_size=3, stride=1, padding=1)
-        #     )
-        # else:
-        #     self.kernel = lambda _: None
 
-        # if self.d_size != None:
-        #     self.kernel_d = torch.nn.Sequential(
-        #         torch.nn.Conv2d(in_channels=64, out_channels=self.d_size, kernel_size=3, stride=1, padding=1),
-        #         torch.nn.ReLU(inplace=False),
-        #         torch.nn.Upsample(scale_factor=2/self.d_scale, mode='bilinear', align_corners=True),
-        #         torch.nn.Conv2d(in_channels=self.d_size, out_channels=self.d_size, kernel_size=3, stride=1, padding=1)
-        #     )
-        # else:
-        #     self.kernel_d = lambda _: None
         
         
         
