@@ -102,9 +102,6 @@ def train(params, n_epochs, verbose=True):
 
 
     if FLAGS.filename == None:
-        # if params['naive']:
-        #     G = SepConvNetExtended(kl_size=params['kernel_size'], input_frames=params['input_size'])
-        # else:
         G = SepConvNetExtended(
             kl_size=params['kl_size'], 
             kq_size=params['kq_size'],
@@ -148,13 +145,11 @@ def train(params, n_epochs, verbose=True):
         start_epoch = checkpoint['epoch']+1
         name = checkpoint['name']
 
-
-
-        # TODO hacky tijdelijk aangepast
         optimizer = torch.optim.Adamax([
                 {'params': [p for l,p in G.named_parameters() if 'moduleConv' not in l]},
                 {'params': [p for l,p in G.named_parameters() if 'moduleConv' in l], 'lr': params['lr2']}
-            ], lr=params['lr'], betas=(.9, .999))
+            ], lr=params['lr'], betas=(.9, .999)
+        )
 
         optimizer.load_state_dict(checkpoint['optimizer'])
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=n_epochs-FLAGS.warmup, eta_min=1e-5, last_epoch=-1)
@@ -323,8 +318,6 @@ def train(params, n_epochs, verbose=True):
     for epoch in range(start_epoch, n_epochs):
 
         G.train()
-        # print('lr1', optimizer.state_dict()['param_groups'][0]['lr'])
-        # print('lr2', optimizer.state_dict()['param_groups'][1]['lr'])
         do_epoch(train_dl, 'train_fold', epoch, train=True)
         
 
@@ -429,24 +422,6 @@ if __name__ == '__main__':
     }
 
     
-
-
-
-    # param_combinations = product(*parameter_space.values())
-    # param_combinations = [dict(zip(parameter_space, values)) for values in param_combinations]
-    
-
-
-    # for p in param_combinations:
-    #     p.update(base_params)
-
-    # parameters = param_combinations[FLAGS.hp_ind: FLAGS.hp_end]
-    
-    
-    # for c in param_combinations:
-    #     print(c)
-
-    # for p in parameters:
     results = train(
         base_params,
         n_epochs=FLAGS.n_epochs,

@@ -43,8 +43,8 @@ METHODS = ['DAIN', 'SepConv', 'QVI', 'QVI_linear']
 FILEPATH_RESULTS = 'results_new2.pkl'
 
 from code.DAIN.interpolate import interpolate_efficient as interpolate
-# from code.quadratic import interpolate
-# from code.sepconv import interpolate
+from code.quadratic import interpolate
+from code.sepconv import interpolate
 
 class ResultStore:   
 
@@ -81,7 +81,6 @@ class ResultStore:
 
 
 method = 'DAIN'
-N_TEST = 1000
 cropper = utilities.Cropper(height=720, width=1280)
 results = ResultStore(filepath=FILEPATH_RESULTS)
 
@@ -89,8 +88,7 @@ for dataset in DATASETS:
     print(f'[{time.ctime()}] Dataset: {dataset}')
     is_quadratic = method == 'QVI'
     gen = dataloader.get_datagenerator(dataset, quadratic=is_quadratic)
-    
-    k = 0
+
     for inputs, ii in tqdm(gen, total=N_TEST):
         
         cornercrops1 = cropper.crop(inputs[0].numpy())
@@ -106,13 +104,6 @@ for dataset in DATASETS:
 
         result = torch.Tensor(cropper.decrop(*cropped_results)).int()
 
-        # result = torch.Tensor(interpolate(inputs))#, t=0.5))
-        
-
-        # imageio.imsave('test_image1.png', i1.numpy())
-        # imageio.imsave('test_image2.png', i2.numpy())
-        # imageio.imsave('test_pred.png', result.numpy())
-        # imageio.imsave('test_gt.png', ii.numpy())
         result = result.unsqueeze(0)
         ii = ii.unsqueeze(0)
 
@@ -123,11 +114,6 @@ for dataset in DATASETS:
 
         results.store(method=method, dataset=dataset, values=[ssim, psnr, ie])
         k+= 1
-
-        if k == N_TEST:
-            break
-
-
 
 
 results.save()

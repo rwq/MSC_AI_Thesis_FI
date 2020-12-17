@@ -30,32 +30,6 @@ def _get_frames_by_indices(cap, indices):
         
     return frames
 
-
-
-# def _create_samples_from_file(file):
-#     cap = cv2.VideoCapture(file)
-#     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-#     k=1
-#     # determine subset
-#     domain = [[i+j for j in range(k+2)] for i in range(n_frames-k-1)]
-    
-#     i = 0
-
-#     while len(domain) > 0:
-#         datapoint = random.choice(domain)
-#         domain = [x for x in domain if sum([x.count(y) for y in datapoint]) == 0]
-
-#         frames = _get_frames_by_indices(cap, datapoint)
-
-#         for j, frame in enumerate(frames):
-#             filename, ext = os.path.basename(file).split('.')
-#             filepath_out = os.path.join(FILEPATH_CREATED_DATASETS, 'UCF101', f"{filename}__{i}_{j}.jpeg")
-#             imageio.imsave(filepath_out, frame)
-
-
-#         i += 1
-
-
 def get_shot_boundaries(cap, threshold=0.6):
     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     frames = deque([], 2)

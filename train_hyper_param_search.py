@@ -324,49 +324,12 @@ def train(params, n_epochs, verbose=True):
 def objective(params):
     '''Minimize loss on validation set'''
     
-    
-    global counter
+    results = train(params, n_epochs=FLAGS.n_epochs, verbose=True)
+    losses = results.results['valid_vimeo']['L1_loss']
+    # max_epoch = np.max(list(losses.keys()))
+    mean_losses = [np.mean(losses[epoch]) for epoch in losses.keys()]
+    best_validation_loss = np.min(mean_losses)
 
-    print(f'counter: {counter}, {params["crop_size"]}, {params["kl_size"]}, {params["optimizer"]}')
-
-
-    if counter == 0:
-        best_validation_loss = 0.00927569530904293
-    elif counter == 1:
-        best_validation_loss = 0.009541794657707214
-    elif counter == 2:
-        best_validation_loss = 0.00951360259205103
-    elif counter == 3:
-        best_validation_loss = 0.009306388907134533
-    
-    elif counter == 4:
-        best_validation_loss = 0.009474706836044788
-    elif counter == 5:
-        best_validation_loss = 0.009491846896708012
-    elif counter == 6:
-        best_validation_loss = 0.009361052885651588
-    
-    elif counter == 7:
-        best_validation_loss = 0.009484115988016129
-
-    elif counter == 8:
-        best_validation_loss = 0.009374646469950676
-    elif counter == 9:
-        best_validation_loss = 0.009199081920087337
-
-        
-
-    else:
-        results = train(params, n_epochs=FLAGS.n_epochs, verbose=True)
-        losses = results.results['valid_vimeo']['L1_loss']
-        # max_epoch = np.max(list(losses.keys()))
-        mean_losses = [np.mean(losses[epoch]) for epoch in losses.keys()]
-        best_validation_loss = np.min(mean_losses)
-
-
-    counter += 1
-
-    
     return best_validation_loss
 
 
@@ -374,8 +337,6 @@ def objective(params):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-
-    counter = 0
 
     parser.add_argument('--batch_size', type = int, default = 8)
     parser.add_argument('--n_epochs', type = int, default = 40)
@@ -389,8 +350,6 @@ if __name__ == '__main__':
     parser.add_argument('--random_rescale_prob', type = float, default = 0)
     parser.add_argument('--flip_probs', type = float, default = .5)
     parser.add_argument('--warmup', type = int, default = 20)
-    
-
     
 
     FLAGS, unparsed = parser.parse_known_args()
@@ -425,11 +384,6 @@ if __name__ == '__main__':
     print('BEST PARAMETER SETTINGS:')
     print(space_eval(paramer_space, optimized))
     
-
-
-
-
-
     with open('results/hp_opt_trials.pickle', 'wb') as f:
         pickle.dump(trials, f)
 

@@ -12,8 +12,6 @@ import argparse
 
 
 
-
-
 OUTPUT_FOLDER = 'results'
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
@@ -41,7 +39,6 @@ def evaluate(model_name, dataset, quadratic=False):
         
     torch.manual_seed(42)
     np.random.seed(42)
-    # model = model.eval()
     
     results = defaultdict(list)
     if dataset == 'lmd':
@@ -88,17 +85,8 @@ def evaluate(model_name, dataset, quadratic=False):
     
     
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser()
-
-    # parser.add_argument('--model', required=True, type=str)
-    # parser.add_argument('--dataset', default='lmd', type=str)
-
-    # FLAGS, unparsed = parser.parse_known_args()
-
-    # assert FLAGS.model in ['sepconv', 'qvi-lin', 'qvi-quad', 'dain']
-    
-    for model in ['dain']:#, 'qvi-lin', 'qvi-quad']:
-        for dataset in ['gopro']:
+    for model in ['dain', 'qvi-lin', 'qvi-quad']:
+        for dataset in ['gopro', 'vimeo90k', 'lmd']:
             results = evaluate(model, dataset, True)
             
             filepath_out = os.path.join(OUTPUT_FOLDER, f'results_{dataset}_{model}_eval.csv')

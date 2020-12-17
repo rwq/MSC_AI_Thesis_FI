@@ -141,10 +141,6 @@ def convert_subnet(subnet, kernel_size, random_output_kernel):
 
     subnet[4] = torch.nn.Conv2d(64, kernel_size, 3, stride=1, padding=1)
 
-    # subnet[4].weight.data.zero_()
-    # subnet[4].bias.data.zero_()
-    # subnet[4].weight.data.div_(10)
-    # subnet[4].bias.data.div_(10)
     if not random_output_kernel and pad > 0:
         subnet[4].weight.data[pad:-pad] = W
         subnet[4].bias.data[pad:-pad] = b
@@ -159,10 +155,7 @@ def convert_subnet(subnet, kernel_size, random_output_kernel):
 
     subnet[7] = torch.nn.Conv2d(kernel_size, kernel_size, 3, stride=1, padding=1)
     
-    # subnet[7].weight.data.zero_()
-    # subnet[7].bias.data.zero_()
-    # subnet[7].weight.data.div_(10)
-    # subnet[7].bias.data.div_(10)
+
     if not random_output_kernel and pad > 0:
         subnet[7].weight.data[pad:-pad, pad:-pad] = W
         subnet[7].bias.data[pad:-pad] = b

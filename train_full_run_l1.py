@@ -150,11 +150,11 @@ def train(params, n_epochs, verbose=True):
 
 
 
-        # TODO hacky tijdelijk aangepast
         optimizer = torch.optim.Adamax([
                 {'params': [p for l,p in G.named_parameters() if 'moduleConv' not in l]},
                 {'params': [p for l,p in G.named_parameters() if 'moduleConv' in l], 'lr': params['lr2']}
-            ], lr=params['lr'], betas=(.9, .999))
+            ], lr=params['lr'], betas=(.9, .999)
+        )
 
         optimizer.load_state_dict(checkpoint['optimizer'])
         scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=60-FLAGS.warmup, T_mult=1, eta_min = 1e-7)
@@ -174,18 +174,10 @@ def train(params, n_epochs, verbose=True):
     print(name)
     sys.stdout.flush()
     
-    # loss_network = losses.LossNetwork(layers=[9,16,26]).cuda() #9, 16, 26
-    # Perc_loss = losses.PerceptualLoss(loss_network, include_input=True)
-    
-    torch.manual_seed(42)
-    np.random.seed(42)
-    random.seed(42)
     
     quadratic = params['input_size'] == 4
     
-    L1_loss = torch.nn.L1Loss()
-    # Flow_loss = losses.FlowLoss(quadratic=quadratic).cuda()
-    
+    L1_loss = torch.nn.L1Loss()    
 
     ds_train_lmd = dataloader.large_motion_dataset(quadratic = quadratic, cropped=True, fold='train', min_flow=6)
     ds_valid_lmd = dataloader.large_motion_dataset(quadratic = quadratic, cropped=True, fold='valid')
@@ -193,12 +185,11 @@ def train(params, n_epochs, verbose=True):
     ds_vimeo_train = dataloader.vimeo90k_dataset(fold='train', quadratic = quadratic)
     ds_vimeo_test = dataloader.vimeo90k_dataset(fold='test', quadratic = quadratic)
 
-    # train, test_lmd = dataloader.split_data(ds_lmd, [.9, .1])
     train_vimeo, valid_vimeo = dataloader.split_data(ds_vimeo_train, [.9, .1])
 
-    # torch.manual_seed(FLAGS.seed)
-    # np.random.seed(FLAGS.seed)
-    # random.seed(FLAGS.seed)
+    torch.manual_seed(FLAGS.seed)
+    np.random.seed(FLAGS.seed)
+    random.seed(FLAGS.seed)
 
     train_settings = {
         'flip_probs':FLAGS.flip_probs,
@@ -224,11 +215,6 @@ def train(params, n_epochs, verbose=True):
     valid_vimeo = dataloader.TransformedDataset(valid_vimeo, **valid_settings)
     test_vimeo  = dataloader.TransformedDataset(ds_vimeo_test, **valid_settings)
 
-    # train_data = torch.utils.data.ConcatDataset([train_lmd, train_vimeo])
-    train_data = train_vimeo
-
-    
-
     # displacement
     df = pd.read_csv(f'hardinstancesinfo/vimeo90k_test_flow.csv')
     test_disp = torch.utils.data.Subset(ds_vimeo_test, indices = df[df.mean_manh_flow>=df.quantile(.9).mean_manh_flow].index.tolist())
@@ -250,7 +236,7 @@ def train(params, n_epochs, verbose=True):
 
     
 
-    train_dl = torch.utils.data.DataLoader(train_data, batch_size=FLAGS.batch_size, pin_memory=True, shuffle=False, sampler=train_sampler, num_workers=FLAGS.num_workers)
+    train_dl = torch.utils.data.DataLoader(train_vimeo, batch_size=FLAGS.batch_size, pin_memory=True, shuffle=False, sampler=train_sampler, num_workers=FLAGS.num_workers)
     valid_dl_vim = torch.utils.data.DataLoader(valid_vimeo, batch_size=4, pin_memory=True, num_workers=FLAGS.num_workers)
     valid_dl_lmd = torch.utils.data.DataLoader(valid_lmd, batch_size=4, pin_memory=True, num_workers=FLAGS.num_workers)
     test_dl_vim = torch.utils.data.DataLoader(test_vimeo, batch_size=4, pin_memory=True, num_workers=FLAGS.num_workers)
@@ -321,8 +307,6 @@ def train(params, n_epochs, verbose=True):
     for epoch in range(start_epoch, n_epochs):
 
         G.train()
-        # print('lr1', optimizer.state_dict()['param_groups'][0]['lr'])
-        # print('lr2', optimizer.state_dict()['param_groups'][1]['lr'])
         do_epoch(train_dl, 'train_fold', epoch, train=True)
         
 
@@ -432,24 +416,6 @@ if __name__ == '__main__':
     }
 
     
-
-
-
-    # param_combinations = product(*parameter_space.values())
-    # param_combinations = [dict(zip(parameter_space, values)) for values in param_combinations]
-    
-
-
-    # for p in param_combinations:
-    #     p.update(base_params)
-
-    # parameters = param_combinations[FLAGS.hp_ind: FLAGS.hp_end]
-    
-    
-    # for c in param_combinations:
-    #     print(c)
-
-    # for p in parameters:
     results = train(
         base_params,
         n_epochs=FLAGS.n_epochs,
