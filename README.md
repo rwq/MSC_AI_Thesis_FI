@@ -7,7 +7,9 @@ In short, the code that was used to find the hyper parameters can be found in  t
 
 After this, we used both train_full_run_l1.py and train_full_run_lf.py to create our 
 
-<img src="https://latex.codecogs.com/gif.latex?O_t=$\mathcal{L}\_1$- and $\mathcal{L}\_f$" /> -model respectively.
+$\mathcal{L}\_1$- and $\mathcal{L}\_f$-model respectively.
+
+
 
 We omitted the datasets from this repository becaus of the space they require. We did leave the directory structure in place, so these datasets can simply be extracted here.
 
