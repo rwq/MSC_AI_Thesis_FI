@@ -349,11 +349,6 @@ def train(params, n_epochs, verbose=True):
         checkpoint = {'last_model':G, 'epoch':epoch, 'optimizer':optimizer.state_dict(), 'name':name, 'scheduler':scheduler}
         torch.save(checkpoint, filepath_out.format('checkpoint', name))
 
-        if epoch == 359-1:
-            checkpoint = {'last_model':G, 'epoch':epoch, 'optimizer':optimizer.state_dict(), 'name':name, 'scheduler':scheduler}
-            torch.save(checkpoint, filepath_out.format('checkpoint_359', name))
-
-
         if early_stopping.stop() and epoch >= FLAGS.min_epochs:
             break
 
