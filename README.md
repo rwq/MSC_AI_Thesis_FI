@@ -14,3 +14,5 @@ $\mathcal{L}\_1$- and $\mathcal{L}\_f$-model respectively.
 We omitted the datasets from this repository becaus of the space they require. We did leave the directory structure in place, so these datasets can simply be extracted here.
 
 The Large Motion VI Dataset was created using create_lmd_dataset.py. It takes as input a set of text files which can be found in /created_datasets/large_motion_dataset/.
+
+This dataset can be downloaded at [https://zenodo.org/record/5139342#.YQBRpUBcKUm](https://zenodo.org/record/5139342#.YQBRpUBcKUm).
