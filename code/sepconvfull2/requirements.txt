@@ -21,4 +21,4 @@ tensorboardX
 
 # OpenCV
 opencv-python == 3.4.1.15
-opencv-contrib-python == 3.4.0.14
+opencv-contrib-python == 3.4.7.28
