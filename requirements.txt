@@ -41,7 +41,7 @@ jupyter-client==6.1.2
 jupyter-core==4.6.3
 kiwisolver==1.2.0
 lazy-object-proxy==1.4.3
-lxml==4.5.2
+lxml==4.6.5
 Markdown==3.2.1
 MarkupSafe==1.1.1
 matplotlib==3.2.1
